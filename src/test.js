@@ -1,8 +1,8 @@
-const {IP2Location, IP2LocationWebService, IPTools} = require("ip2location-nodejs");
+const {IP2Location, IP2LocationWebService, IPTools, Country, Region} = require("ip2location-nodejs");
 
 let ip2location = new IP2Location();
 
-ip2location.open("./DB25.BIN");
+ip2location.open("./DB26.BIN");
 
 testip = ['2001:0:4136:e378:8000:63bf:f7f7:f7f7', '2002:0803:2200::0803:2200'];
 
@@ -34,6 +34,9 @@ for (var x = 0; x < testip.length; x++) {
 	console.log("usageType: " + ip2location.getUsageType(testip[x]));
 	console.log("addressType: " + ip2location.getAddressType(testip[x]));
 	console.log("category: " + ip2location.getCategory(testip[x]));
+	console.log("district: " + ip2location.getDistrict(testip[x]));
+	console.log("asn: " + ip2location.getASN(testip[x]));
+	console.log("as: " + ip2location.getAS(testip[x]));
 	console.log("==================================================================");
 }
 
@@ -84,3 +87,19 @@ for (const x of cidr) {
 }
 console.log(tools.cidrToIPV4("10.123.80.0/12"));
 console.log(tools.cidrToIPV6("2002:1234::abcd:ffff:c0a8:101/62"));
+
+let country = new Country("./IP2LOCATION-COUNTRY-INFORMATION-BASIC.CSV");
+
+country.getCountryInfo("US").then(country_info => {
+	console.log(country_info);
+});
+
+country.getCountryInfo("").then(country_info => {
+	console.log(country_info);
+});
+
+let region = new Region("./IP2LOCATION-ISO3166-2.CSV");
+
+region.getRegionCode("US", "California").then(region_code => {
+	console.log(region_code);
+});

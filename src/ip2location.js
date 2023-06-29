@@ -1,92 +1,114 @@
 var net = require("net");
 var fs = require("fs");
-var bigInt = require("big-integer");
 var https = require("https");
+const csv = require("csv-parser");
 
 // For BIN queries
-const VERSION = "9.3.1";
+const VERSION = "9.5.0";
 const MAX_INDEX = 65536;
 const COUNTRY_POSITION = [
   0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+  2,
 ];
 const REGION_POSITION = [
   0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+  3,
 ];
 const CITY_POSITION = [
   0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
+  4,
 ];
 const ISP_POSITION = [
   0, 0, 3, 0, 5, 0, 7, 5, 7, 0, 8, 0, 9, 0, 9, 0, 9, 0, 9, 7, 9, 0, 9, 7, 9, 9,
+  9,
 ];
 const LATITUDE_POSITION = [
   0, 0, 0, 0, 0, 5, 5, 0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+  5,
 ];
 const LONGITUDE_POSITION = [
   0, 0, 0, 0, 0, 6, 6, 0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+  6,
 ];
 const DOMAIN_POSITION = [
   0, 0, 0, 0, 0, 0, 0, 6, 8, 0, 9, 0, 10, 0, 10, 0, 10, 0, 10, 8, 10, 0, 10, 8,
-  10, 10,
+  10, 10, 10,
 ];
 const ZIP_CODE_POSITION = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 7, 7, 7, 0, 7, 7, 7, 0, 7, 0, 7, 7, 7, 0, 7, 7,
+  7,
 ];
 const TIME_ZONE_POSITION = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 8, 7, 8, 8, 8, 7, 8, 0, 8, 8, 8, 0, 8, 8,
+  8,
 ];
 const NET_SPEED_POSITION = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 11, 0, 11, 8, 11, 0, 11, 0, 11, 0,
-  11, 11,
+  11, 11, 11,
 ];
 const IDD_CODE_POSITION = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 12, 0, 12, 0, 12, 9, 12, 0,
-  12, 12,
+  12, 12, 12,
 ];
 const AREA_CODE_POSITION = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 13, 0, 13, 0, 13, 10, 13, 0,
-  13, 13,
+  13, 13, 13,
 ];
 const WEATHER_STATION_CODE_POSITION = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 14, 0, 14, 0, 14, 0, 14,
-  14,
+  14, 14,
 ];
 const WEATHER_STATION_NAME_POSITION = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 15, 0, 15, 0, 15, 0,
-  15, 15,
+  15, 15, 15,
 ];
 const MCC_POSITION = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 16, 0, 16, 9, 16,
-  16,
+  16, 16,
 ];
 const MNC_POSITION = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 17, 0, 17, 10,
-  17, 17,
+  17, 17, 17,
 ];
 const MOBILE_BRAND_POSITION = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 18, 0, 18, 11,
-  18, 18,
+  18, 18, 18,
 ];
 const ELEVATION_POSITION = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 19, 0, 19,
-  19,
+  19, 19,
 ];
 const USAGE_TYPE_POSITION = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 20,
-  20,
+  20, 20,
 ];
 const ADDRESS_TYPE_POSITION = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21,
+  21,
 ];
 const CATEGORY_POSITION = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22,
+  22,
 ];
-const MAX_IPV4_RANGE = bigInt(4294967295);
-const MAX_IPV6_RANGE = bigInt("340282366920938463463374607431768211455");
-const FROM_6TO4 = bigInt("42545680458834377588178886921629466624");
-const TO_6TO4 = bigInt("42550872755692912415807417417958686719");
-const FROM_TEREDO = bigInt("42540488161975842760550356425300246528");
-const TO_TEREDO = bigInt("42540488241204005274814694018844196863");
-const LAST_32_BITS = bigInt("4294967295");
+const DISTRICT_POSITION = [
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  23,
+];
+const ASN_POSITION = [
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  24,
+];
+const AS_POSITION = [
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  25,
+];
+const MAX_IPV4_RANGE = BigInt(4294967295);
+const MAX_IPV6_RANGE = BigInt("340282366920938463463374607431768211455");
+const FROM_6TO4 = BigInt("42545680458834377588178886921629466624");
+const TO_6TO4 = BigInt("42550872755692912415807417417958686719");
+const FROM_TEREDO = BigInt("42540488161975842760550356425300246528");
+const TO_TEREDO = BigInt("42540488241204005274814694018844196863");
+const LAST_32_BITS = BigInt("4294967295");
 
 const MODES = {
   COUNTRY_SHORT: 1,
@@ -111,6 +133,9 @@ const MODES = {
   USAGE_TYPE: 20,
   ADDRESS_TYPE: 21,
   CATEGORY: 22,
+  DISTRICT: 23,
+  ASN: 24,
+  AS: 25,
   ALL: 100,
 };
 const MSG_NOT_SUPPORTED =
@@ -171,6 +196,9 @@ class IP2Location {
   #usageTypePositionOffset = 0;
   #addressTypePositionOffset = 0;
   #categoryPositionOffset = 0;
+  #districtPositionOffset = 0;
+  #asnPositionOffset = 0;
+  #asPositionOffset = 0;
 
   #countryEnabled = 0;
   #regionEnabled = 0;
@@ -193,6 +221,9 @@ class IP2Location {
   #usageTypeEnabled = 0;
   #addressTypeEnabled = 0;
   #categoryEnabled = 0;
+  #districtEnabled = 0;
+  #asnEnabled = 0;
+  #asEnabled = 0;
 
   #myDB = {
     dbType: 0,
@@ -238,7 +269,7 @@ class IP2Location {
           break;
         case "uint32":
           return isBigInt
-            ? bigInt(buffer.readUInt32LE(0))
+            ? BigInt(buffer.readUInt32LE(0))
             : buffer.readUInt32LE(0);
           break;
         case "float":
@@ -248,12 +279,10 @@ class IP2Location {
           return buffer.toString("utf8");
           break;
         case "int128":
-          let myBig = bigInt(); // zero
+          let myBig = BigInt(0); // zero
           let bitShift = 8;
           for (let x = 0; x < 16; x++) {
-            myBig = myBig.add(
-              bigInt(buffer.readUInt8(x)).shiftLeft(bitShift * x)
-            );
+            myBig = myBig + (BigInt(buffer.readUInt8(x)) << (bitShift * x));
           }
           return myBig;
           break;
@@ -287,13 +316,12 @@ class IP2Location {
 
   // Read 128 bits integer in the buffer
   read128Row(position, buffer) {
-    let myBig = bigInt(); // zero
+    let myBig = BigInt(0); // zero
     let bitShift = 8;
     for (let x = 0; x < 16; x++) {
       let pos = position + x;
-      myBig = myBig.add(
-        bigInt(this.read8Row(pos, buffer)).shiftLeft(bitShift * x)
-      );
+      myBig =
+        myBig + (BigInt(this.read8Row(pos, buffer)) << BigInt(bitShift * x));
     }
     return myBig;
   }
@@ -437,6 +465,12 @@ class IP2Location {
             : 0;
         this.#categoryPositionOffset =
           CATEGORY_POSITION[dbt] != 0 ? (CATEGORY_POSITION[dbt] - 2) << 2 : 0;
+        this.#districtPositionOffset =
+          DISTRICT_POSITION[dbt] != 0 ? (DISTRICT_POSITION[dbt] - 2) << 2 : 0;
+        this.#asnPositionOffset =
+          ASN_POSITION[dbt] != 0 ? (ASN_POSITION[dbt] - 2) << 2 : 0;
+        this.#asPositionOffset =
+          AS_POSITION[dbt] != 0 ? (AS_POSITION[dbt] - 2) << 2 : 0;
 
         this.#countryEnabled = COUNTRY_POSITION[dbt] != 0 ? 1 : 0;
         this.#regionEnabled = REGION_POSITION[dbt] != 0 ? 1 : 0;
@@ -461,6 +495,9 @@ class IP2Location {
         this.#usageTypeEnabled = USAGE_TYPE_POSITION[dbt] != 0 ? 1 : 0;
         this.#addressTypeEnabled = ADDRESS_TYPE_POSITION[dbt] != 0 ? 1 : 0;
         this.#categoryEnabled = CATEGORY_POSITION[dbt] != 0 ? 1 : 0;
+        this.#districtEnabled = DISTRICT_POSITION[dbt] != 0 ? 1 : 0;
+        this.#asnEnabled = ASN_POSITION[dbt] != 0 ? 1 : 0;
+        this.#asEnabled = AS_POSITION[dbt] != 0 ? 1 : 0;
 
         if (this.#myDB.indexed == 1) {
           len = MAX_INDEX;
@@ -578,8 +615,8 @@ class IP2Location {
       ipNumber = ip2No(myIP);
 
       if (
-        (ipNumber.geq(FROM_6TO4) && ipNumber.leq(TO_6TO4)) ||
-        (ipNumber.geq(FROM_TEREDO) && ipNumber.leq(TO_TEREDO))
+        (ipNumber >= FROM_6TO4 && ipNumber <= TO_6TO4) ||
+        (ipNumber >= FROM_TEREDO && ipNumber <= TO_TEREDO)
       ) {
         ipType = 4;
         MAX_IP_RANGE = MAX_IPV4_RANGE;
@@ -587,10 +624,10 @@ class IP2Location {
         baseAddress = this.#myDB.baseAddress;
         columnSize = this.#ipV4ColumnSize;
 
-        if (ipNumber.geq(FROM_6TO4) && ipNumber.leq(TO_6TO4)) {
-          ipNumber = ipNumber.shiftRight(80).and(LAST_32_BITS).toJSNumber();
+        if (ipNumber >= FROM_6TO4 && ipNumber <= TO_6TO4) {
+          ipNumber = Number((ipNumber >> BigInt(80)) & LAST_32_BITS);
         } else {
-          ipNumber = ipNumber.not().and(LAST_32_BITS).toJSNumber();
+          ipNumber = Number(~ipNumber & LAST_32_BITS);
         }
         if (this.#myDB.indexed == 1) {
           indexAddress = ipNumber >>> 16;
@@ -600,17 +637,17 @@ class IP2Location {
       } else {
         firstCol = 16; // IPv6 is 16 bytes
         if (this.#myDB.indexedIPV6 == 1) {
-          indexAddress = ipNumber.shiftRight(112).toJSNumber();
+          indexAddress = Number(ipNumber >> BigInt(112));
           low = this.#indexArrayIPV6[indexAddress][0];
           high = this.#indexArrayIPV6[indexAddress][1];
         }
       }
     }
     data.ip = myIP;
-    ipNumber = bigInt(ipNumber);
+    ipNumber = BigInt(ipNumber);
 
-    if (ipNumber.geq(MAX_IP_RANGE)) {
-      ipNumber = MAX_IP_RANGE.minus(1);
+    if (ipNumber >= MAX_IP_RANGE) {
+      ipNumber = MAX_IP_RANGE - BigInt(1);
     }
 
     data.ipNo = ipNumber.toString();
@@ -625,10 +662,10 @@ class IP2Location {
       ipFrom = this.read32Or128Row(0, fullRow, firstCol);
       ipTo = this.read32Or128Row(columnSize, fullRow, firstCol);
 
-      ipFrom = bigInt(ipFrom);
-      ipTo = bigInt(ipTo);
+      ipFrom = BigInt(ipFrom);
+      ipTo = BigInt(ipTo);
 
-      if (ipFrom.leq(ipNumber) && ipTo.gt(ipNumber)) {
+      if (ipFrom <= ipNumber && ipTo > ipNumber) {
         loadMesg(data, MSG_NOT_SUPPORTED); // load default message
 
         let rowLen = columnSize - firstCol;
@@ -795,9 +832,28 @@ class IP2Location {
             );
           }
         }
+        if (this.#districtEnabled) {
+          if (mode == MODES.ALL || mode == MODES.DISTRICT) {
+            data.district = this.readStr(
+              this.read32Row(this.#districtPositionOffset, row)
+            );
+          }
+        }
+        if (this.#asnEnabled) {
+          if (mode == MODES.ALL || mode == MODES.ASN) {
+            data.asn = this.readStr(
+              this.read32Row(this.#asnPositionOffset, row)
+            );
+          }
+        }
+        if (this.#asEnabled) {
+          if (mode == MODES.ALL || mode == MODES.AS) {
+            data.as = this.readStr(this.read32Row(this.#asPositionOffset, row));
+          }
+        }
         return;
       } else {
-        if (ipFrom.gt(ipNumber)) {
+        if (ipFrom > ipNumber) {
           high = mid - 1;
         } else {
           low = mid + 1;
@@ -834,6 +890,9 @@ class IP2Location {
       usageType: "?",
       addressType: "?",
       category: "?",
+      district: "?",
+      asn: "?",
+      as: "?",
     };
 
     if (REGEX_IPV4_1_MATCH.test(myIP)) {
@@ -1020,6 +1079,24 @@ class IP2Location {
     return data.category;
   }
 
+  // Return a string for the district name
+  getDistrict(myIP) {
+    let data = this.geoQuery(myIP, MODES.DISTRICT);
+    return data.district;
+  }
+
+  // Return a string for the autonomous system number (ASN)
+  getASN(myIP) {
+    let data = this.geoQuery(myIP, MODES.ASN);
+    return data.asn;
+  }
+
+  // Return a string for the autonomous system (AS)
+  getAS(myIP) {
+    let data = this.geoQuery(myIP, MODES.AS);
+    return data.as;
+  }
+
   // Return all results
   getAll(myIP) {
     let data = this.geoQuery(myIP, MODES.ALL);
@@ -1039,7 +1116,7 @@ function ip2No(ipV6) {
   let sectionBits = 16; // 16 bits per section
   let m = ipV6.split("::");
 
-  let total = bigInt(); // zero
+  let total = BigInt(0); // zero
 
   if (m.length == 2) {
     let myArrLeft = m[0] != "" ? m[0].split(":") : [];
@@ -1047,29 +1124,26 @@ function ip2No(ipV6) {
     let myArrMid = maxSections - myArrLeft.length - myArrRight.length;
 
     for (let x = 0; x < myArrLeft.length; x++) {
-      total = total.add(
-        bigInt(parseInt("0x" + myArrLeft[x])).shiftLeft(
-          (maxSections - (x + 1)) * sectionBits
-        )
-      );
+      total =
+        total +
+        (BigInt(parseInt("0x" + myArrLeft[x])) <<
+          BigInt((maxSections - (x + 1)) * sectionBits));
     }
 
     for (let x = 0; x < myArrRight.length; x++) {
-      total = total.add(
-        bigInt(parseInt("0x" + myArrRight[x])).shiftLeft(
-          (myArrRight.length - (x + 1)) * sectionBits
-        )
-      );
+      total =
+        total +
+        (BigInt(parseInt("0x" + myArrRight[x])) <<
+          BigInt((myArrRight.length - (x + 1)) * sectionBits));
     }
   } else if (m.length == 1) {
     let myArr = m[0].split(":");
 
     for (let x = 0; x < myArr.length; x++) {
-      total = total.add(
-        bigInt(parseInt("0x" + myArr[x])).shiftLeft(
-          (maxSections - (x + 1)) * sectionBits
-        )
-      );
+      total =
+        total +
+        (BigInt(parseInt("0x" + myArr[x])) <<
+          BigInt((maxSections - (x + 1)) * sectionBits));
     }
   }
 
@@ -1238,10 +1312,10 @@ class IPTools {
   // Convert IP number to IPv6 address
   decimalToIPV6(ipNum) {
     if (typeof ipNum == "string" || typeof ipNum == "number") {
-      ipNum = bigInt(ipNum);
+      ipNum = BigInt(ipNum);
     }
 
-    if (ipNum.lt(bigInt.zero) || ipNum.gt(MAX_IPV6_RANGE)) {
+    if (ipNum < BigInt(0) || ipNum > MAX_IPV6_RANGE) {
       return null;
     }
 
@@ -1355,7 +1429,7 @@ class IPTools {
       return null;
     }
 
-    let ipNum = bigInt(myBin, 2);
+    let ipNum = BigInt("0b" + myBin);
     let v6 = this.decimalToIPV6(ipNum);
 
     return v6;
@@ -1541,8 +1615,121 @@ class IPTools {
   }
 }
 
+// Country class
+class Country {
+  #fields = Array();
+  #records = {};
+  #fd;
+  #ready = false;
+
+  constructor(csvFile) {
+    if (!fs.existsSync(csvFile)) {
+      throw new Error("The CSV file " + csvFile + " is not found.");
+    }
+    try {
+      fs.createReadStream(csvFile)
+        .pipe(csv(true))
+        .on("data", (data) => {
+          if (data.country_code) {
+            this.#records[data.country_code] = data;
+          } else {
+            throw new Error("Invalid country information CSV file.");
+          }
+        })
+        .on("end", () => {
+          this.#ready = true;
+        });
+    } catch (err) {
+      throw new Error("Unable to read " + csvFile + ".");
+    }
+  }
+
+  // Get country information
+  async getCountryInfo(countryCode = "") {
+    while (!this.#ready) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    countryCode = countryCode.trim();
+    let results = Array();
+    if (Object.keys(this.#records).length === 0) {
+      throw new Error("No record available.");
+    }
+    if (countryCode != "") {
+      if (this.#records[countryCode]) {
+        results.push(this.#records[countryCode]);
+      }
+    } else {
+      for (const elem in this.#records) {
+        results.push(this.#records[elem]);
+      }
+    }
+    return results;
+  }
+}
+
+// Region class
+class Region {
+  #fields = Array();
+  #records = {};
+  #fd;
+  #ready = false;
+
+  constructor(csvFile) {
+    if (!fs.existsSync(csvFile)) {
+      throw new Error("The CSV file " + csvFile + " is not found.");
+    }
+    try {
+      fs.createReadStream(csvFile)
+        .pipe(csv(true))
+        .on("data", (data) => {
+          if (data.subdivision_name) {
+            if (!this.#records[data.country_code]) {
+              this.#records[data.country_code] = Array();
+            }
+            this.#records[data.country_code].push({
+              code: data.code,
+              name: data.subdivision_name,
+            });
+          } else {
+            throw new Error("Invalid region information CSV file.");
+          }
+        })
+        .on("end", () => {
+          this.#ready = true;
+        });
+    } catch (err) {
+      throw new Error("Unable to read " + csvFile + ".");
+    }
+  }
+
+  // Get region code
+  async getRegionCode(countryCode = "", regionName = "") {
+    while (!this.#ready) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    countryCode = countryCode.trim();
+    regionName = regionName.trim();
+    if (Object.keys(this.#records).length === 0) {
+      throw new Error("No record available.");
+    }
+    if (this.#records[countryCode]) {
+      for (let x = 0; x < this.#records[countryCode].length; x++) {
+        let elem = this.#records[countryCode][x];
+        if (regionName.toUpperCase() == elem.name.toUpperCase()) {
+          return elem.code;
+        }
+      }
+      return null;
+    } else {
+      return null;
+    }
+  }
+}
+
 module.exports = {
   IP2Location: IP2Location,
   IP2LocationWebService: IP2LocationWebService,
   IPTools: IPTools,
+  Country: Country,
+  Region: Region,
 };
